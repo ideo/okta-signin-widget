@@ -18,7 +18,7 @@ define([
     template: '\
         <div class="content">\
           <span class="registration-label">{{label}}</span>\
-          <a title="{{text}}" aria-label="{{text}}" class="registration-link" href="#">{{text}}</a>\
+          <a title="{{text}}" aria-label="{{text}}" data-se="register" class="registration-link" href="#">{{text}}</a>\
         </div>\
         ',
     className: 'registration-container',
@@ -39,11 +39,11 @@ define([
     },
 
     getTemplateData: function () {
-      var templateData = {  
+      var templateData = {
         label: Okta.loc('registration.signup.label', 'login'),
         text: Okta.loc('registration.signup.text', 'login')
       };
-      return templateData; 
+      return templateData;
     }
   });
 
