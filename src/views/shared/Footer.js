@@ -42,9 +42,9 @@ function (Okta, Util) {
           <a href="{{href}}" class="link js-custom">{{text}}</a></li>\
         {{/each}}\
         <li>\
-        <a href="{{helpLinkUrl}}" data-se="help-link" class="link js-help-link" target="_blank">\
+        <!--<a href="{{helpLinkUrl}}" data-se="help-link" class="link js-help-link" target="_blank">\
         {{i18n code="help" bundle="login"}}\
-        </a>\
+        </a>-->\
         </li>\
       </ul>\
     ',
