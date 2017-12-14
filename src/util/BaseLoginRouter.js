@@ -275,6 +275,12 @@ function (Okta, Backbone, BrowserFeatures, RefreshAuthStateController, Settings,
         }, this));
         pushState = BrowserFeatures.supportsPushState();
       }
+
+      // BUGFIX: Do not use pushState as embedded apps and servers are
+      // not set up to understand or support potential Okta routes
+      // See: https://github.com/okta/okta-signin-widget/issues/300
+      pushState = false;
+
       Okta.Router.prototype.start.call(this, { pushState: pushState });
     },
 
