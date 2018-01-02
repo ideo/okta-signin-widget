@@ -82,27 +82,22 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
       },
       save: function () {
         var self = this;
-        // debugger; // eslint-disable-line
         return this.startTransaction(function (authClient) {
           var deferred = Q.defer();
-          // $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
-          $.post('http://localhost:3333/api/v1/users', {
+          $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
             first_name: self.get('firstname'), // eslint-disable-line camelcase
             last_name: self.get('firstname'), // eslint-disable-line camelcase
             email: self.get('username'),
             password: self.get('password')
           }).done(function(success) {
-            console.log('second success', success); // eslint-disable-line
             deferred.resolve(
               authClient.signIn({
                 username: self.get('username'),
                 password: self.get('password')
               })
             );
-          }).fail(function(request, err) {
-            console.log('error', err); // eslint-disable-line
-          }).always(function() {
-            console.log('finished'); // eslint-disable-line
+          }).fail(function() {
+            // console.log('error', err); // eslint-disable-line
           });
 
           return deferred.promise;
