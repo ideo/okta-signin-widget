@@ -33,6 +33,27 @@ define(['okta'], function (Okta) {
     }
   };
 
+  // Validate that the 'password' field is at least 8 characters
+  fn.validatePasswordLength = function (model) {
+    var password = model.get('password');
+    if (password && password.length < 8) {
+      return {
+        password: Okta.loc('model.validation.field.too.small', 'login', [8])
+      };
+    }
+  };
+
+  // Validate that the given field is not blank
+  fn.validateRequired = function (model, field) {
+    var data = model.get(field);
+    if (!data || data.length < 1) {
+      var error = {};
+      error[field] = Okta.loc('model.validation.field.blank', 'login');
+      return error;
+    }
+  };
+
+
   return fn;
 
 });

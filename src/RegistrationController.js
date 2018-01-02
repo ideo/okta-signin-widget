@@ -12,14 +12,16 @@
 
 define([
   'okta',
+  'okta/jquery',
   'util/FormController',
   'util/Enums',
   'util/FormType',
   'util/ValidationUtil',
+  'vendor/lib/q',
   'views/shared/ContactSupport',
   'views/shared/TextBox'
 ],
-function (Okta, FormController, Enums, FormType, ValidationUtil, ContactSupport, TextBox) {
+function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSupport, TextBox) {
 
   var _ = Okta._;
   var noFactorsError = '<div class="okta-form-infobox-error infobox infobox-error" role="alert">\
@@ -63,32 +65,92 @@ function (Okta, FormController, Enums, FormType, ValidationUtil, ContactSupport,
     className: 'register',
     Model: {
       props: {
+        firstname: ['string', true],
+        lastname: ['string', true],
         username: ['string', true],
-        password: ['string', true],
-        passwordConfirmation: ['string', true]
+        password: ['string', true]
       },
       validate: function () {
-        return ValidationUtil.validateUsername(this);
+        var invalid = ValidationUtil.validateUsername(this);
+        invalid = invalid || ValidationUtil.validateRequired(this, 'firstname');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'lastname');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'username');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'password');
+        invalid = invalid || ValidationUtil.validatePasswordLength(this);
+
+        return invalid;
       },
       save: function () {
         var self = this;
-        this.startTransaction(function(authClient) {
-          return authClient.forgotPassword({
-            username: self.settings.transformUsername(self.get('username'), Enums.FORGOT_PASSWORD),
-            factorType: self.get('factorType')
+        // debugger; // eslint-disable-line
+        return this.startTransaction(function (authClient) {
+          var deferred = Q.defer();
+          // $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
+          $.post('http://localhost:3333/api/v1/users', {
+            first_name: self.get('firstname'), // eslint-disable-line camelcase
+            last_name: self.get('firstname'), // eslint-disable-line camelcase
+            email: self.get('username'),
+            password: self.get('password')
+          }).done(function(success) {
+            console.log('second success', success); // eslint-disable-line
+            deferred.resolve(
+              authClient.signIn({
+                username: self.get('username'),
+                password: self.get('password')
+              })
+            );
+          }).fail(function(request, err) {
+            console.log('error', err); // eslint-disable-line
+          }).always(function() {
+            console.log('finished'); // eslint-disable-line
           });
+
+          return deferred.promise;
         })
         .fail(function () {
           //need empty fail handler on model to display errors on form
         });
+        // this.startTransaction(function(authClient) {
+        //   return authClient.forgotPassword({
+        //     username: self.settings.transformUsername(self.get('username'), Enums.FORGOT_PASSWORD),
+        //     factorType: self.get('factorType')
+        //   });
+        // })
+        // .fail(function () {
+        //   //need empty fail handler on model to display errors on form
+        // });
       }
     },
     Form: {
-      noButtonBar: true,
+      noCancelButton: true,
+      save: _.partial(Okta.loc, 'registration.form.submit', 'login'),
+      saveId: 'okta-registration-submit',
       title: _.partial(Okta.loc, 'registration.form.title', 'login'),
       formChildren: function () {
         /*eslint complexity: [2, 9] max-statements: [2, 23] */
         var formChildren = [];
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.firstname.placeholder', 'login'),
+          name: 'firstname',
+          input: TextBox,
+          type: 'text',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.firstname.tooltip', 'login'),
+            icon: 'person-16-gray'
+          }
+        }));
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.lastname.placeholder', 'login'),
+          name: 'lastname',
+          input: TextBox,
+          type: 'text',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.lastname.tooltip', 'login'),
+            icon: 'person-16-gray'
+          }
+        }));
 
         formChildren.push(FormType.Input({
           placeholder: Okta.loc('primaryauth.username.placeholder', 'login'),
@@ -112,21 +174,9 @@ function (Okta, FormController, Enums, FormType, ValidationUtil, ContactSupport,
           }
         }));
 
-        formChildren.push(FormType.Input({
-          placeholder: Okta.loc('password.confirmPassword.placeholder', 'login'),
-          name: 'passwordConfirmation',
-          input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.confirmPassword.tooltip', 'login'),
-            icon: 'remote-lock-16'
-          }
-        }));
-
         return formChildren;
       },
       initialize: function () {
-
         this.listenTo(this.state, 'contactSupport', function () {
           this.add(ContactSupport, '.o-form-error-container');
         });
