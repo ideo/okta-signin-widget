@@ -24,11 +24,6 @@ define([
 function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSupport, TextBox) {
 
   var _ = Okta._;
-  var noFactorsError = '<div class="okta-form-infobox-error infobox infobox-error" role="alert">\
-    <span class="icon error-16"></span>\
-    <p>{{i18n code="password.forgot.noFactorsEnabled" bundle="login"}}</p>\
-  </div>';
-
   var Footer = Okta.View.extend({
     template: '\
       <a href="#" class="link help js-back" data-se="back-link">\
@@ -86,10 +81,10 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
           var deferred = Q.defer();
           $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
             first_name: self.get('firstname'), // eslint-disable-line camelcase
-            last_name: self.get('firstname'), // eslint-disable-line camelcase
+            last_name: self.get('lastname'), // eslint-disable-line camelcase
             email: self.get('username'),
             password: self.get('password')
-          }).done(function(success) {
+          }).done(function() {
             deferred.resolve(
               authClient.signIn({
                 username: self.get('username'),
