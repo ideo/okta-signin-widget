@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2017, Okta, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
  * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
  *
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
@@ -12,43 +12,48 @@
 
 define([
   'okta',
-  'backbone',
-  'models/RegistrationSchema',
-  'models/LoginModel',
-  'util/BaseLoginController',
+  'okta/jquery',
+  'util/FormController',
   'util/Enums',
-  'util/RegistrationFormFactory',
-  'util/RouterUtil',
-  'views/registration/SubSchema',
-  'util/Errors'
+  'util/FormType',
+  'util/ValidationUtil',
+  'vendor/lib/q',
+  'views/shared/ContactSupport',
+  'views/shared/TextBox'
 ],
-function (
-  Okta,
-  Backbone,
-  RegistrationSchema,
-  LoginModel,
-  BaseLoginController,
-  Enums,
-  RegistrationFormFactory,
-  RouterUtil,
-  SubSchema,
-  Errors
-) {
+function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSupport, TextBox) {
 
   var _ = Okta._;
+  var noFactorsError = '<div class="okta-form-infobox-error infobox infobox-error" role="alert">\
+    <span class="icon error-16"></span>\
+    <p>{{i18n code="password.forgot.noFactorsEnabled" bundle="login"}}</p>\
+  </div>';
 
   var Footer = Okta.View.extend({
     template: '\
-      <a href="#" class="link help" data-se="back-link">\
+      <a href="#" class="link help js-back" data-se="back-link">\
         {{i18n code="goback" bundle="login"}}\
       </a>\
+      {{#if helpSupportNumber}}\
+      <a href="#" class="link goto js-contact-support">\
+        {{i18n code="mfa.noAccessToEmail" bundle="login"}}\
+      </a>\
+      {{/if}}\
     ',
     className: 'auth-footer',
     events: {
-      'click .help' : function (e) {
+      'click .js-back' : function (e) {
         e.preventDefault();
         this.back();
+      },
+      'click .js-contact-support': function (e) {
+        e.preventDefault();
+        this.state.trigger('contactSupport');
+        this.$('.js-contact-support').hide();
       }
+    },
+    getTemplateData: function () {
+      return this.settings.pick('helpSupportNumber');
     },
     back: function () {
       this.state.set('navigateDir', Enums.DIRECTION_BACK);
@@ -56,154 +61,156 @@ function (
     }
   });
 
-  var Form = Okta.Form.extend({
-    layout: 'o-form-theme',
-    autoSave: true,
-    noCancelButton: true,
-    title: Okta.loc('registration.form.title', 'login'),
-    save: Okta.loc('registration.form.submit', 'login')
-  });
+  return FormController.extend({
+    className: 'register',
+    Model: {
+      props: {
+        firstname: ['string', true],
+        lastname: ['string', true],
+        username: ['string', true],
+        password: ['string', true]
+      },
+      validate: function () {
+        var invalid = ValidationUtil.validateUsername(this);
+        invalid = invalid || ValidationUtil.validateRequired(this, 'firstname');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'lastname');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'username');
+        invalid = invalid || ValidationUtil.validateRequired(this, 'password');
+        invalid = invalid || ValidationUtil.validatePasswordLength(this);
 
-  return BaseLoginController.extend({
-    className: 'registration',
-    initialize: function() {
-      // setup schema
-      var Schema = RegistrationSchema.extend({
-        settings: this.options.settings,
-        url: this.getRegistrationApiUrl()+'/form'
-      });
-      var schema = new Schema();
-      this.state.set('schema', schema);
-    },
-    getRegistrationApiUrl: function() {
-      var clientId = this.options.settings.get('clientId');
-      return this.options.settings.get('baseUrl')+'/api/v1/registration/'+clientId;
-    },
-    doPostSubmit: function () {
-      if (this.model.get('activationToken')) {
-        // register via activation token
+        return invalid;
+      },
+      save: function () {
         var self = this;
-        self.settings.callGlobalSuccess(Enums.REGISTRATION_COMPLETE, {
-          activationToken: this.model.get('activationToken')
-        });
-
-        var loginModel = new LoginModel({
-          settings: self.model.appState.settings
-        });
-        loginModel.loginWithActivationToken(this.model.get('activationToken'))
-        .then(function (transaction) {
-          self.model.trigger('setTransaction', transaction);
-        });
-      } else {
-        // register via activation email
-        this.model.appState.set('username', this.model.get('userName'));
-        this.model.appState.trigger('navigate', 'signin/register-complete');
-      }
-    },
-    registerUser: function (postData) {
-      var self = this;
-      this.model.attributes = postData;
-      Backbone.Model.prototype.save.call(this.model).then(function() {
-        var activationToken = self.model.get('activationToken');
-        var postSubmitData = activationToken ? activationToken : self.model.get('userName');
-        self.settings.postSubmit(postSubmitData, function() {
-          self.doPostSubmit();
-        }, function(errors) {
-          self.showErrors(errors);
-        });
-      }).fail(function(err) {
-        var responseJSON = err.responseJSON;
-        if (responseJSON && responseJSON.errorCauses.length) {
-          var errMsg = responseJSON.errorCauses[0].errorSummary;
-          self.settings.callGlobalError(new Errors.RegistrationError(errMsg));
-        }
-      });
-    },
-    createRegistrationModel: function (modelProperties) {
-      var self = this;
-      var Model = Okta.Model.extend({
-        url: self.getRegistrationApiUrl()+'/register',
-        settings: this.settings,
-        appState: this.options.appState,
-        props: modelProperties,
-        local: {
-          activationToken: 'string'
-        },
-        toJSON: function() {
-          var data = Okta.Model.prototype.toJSON.apply(this, arguments);
-          return {userProfile: data};
-        },
-        parse: function(resp) {
-          this.set('activationToken', resp.activationToken);
-          delete resp.activationToken;
-          return resp;
-        },
-        save: function() {
-          this.settings.preSubmit(this.attributes, function(postData){
-            self.registerUser(postData);
-          }, function(errors) {
-            self.showErrors(errors);
+        // debugger; // eslint-disable-line
+        return this.startTransaction(function (authClient) {
+          var deferred = Q.defer();
+          // $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
+          $.post('http://localhost:3333/api/v1/users', {
+            first_name: self.get('firstname'), // eslint-disable-line camelcase
+            last_name: self.get('firstname'), // eslint-disable-line camelcase
+            email: self.get('username'),
+            password: self.get('password')
+          }).done(function(success) {
+            console.log('second success', success); // eslint-disable-line
+            deferred.resolve(
+              authClient.signIn({
+                username: self.get('username'),
+                password: self.get('password')
+              })
+            );
+          }).fail(function(request, err) {
+            console.log('error', err); // eslint-disable-line
+          }).always(function() {
+            console.log('finished'); // eslint-disable-line
           });
+
+          return deferred.promise;
+        })
+        .fail(function () {
+          //need empty fail handler on model to display errors on form
+        });
+        // this.startTransaction(function(authClient) {
+        //   return authClient.forgotPassword({
+        //     username: self.settings.transformUsername(self.get('username'), Enums.FORGOT_PASSWORD),
+        //     factorType: self.get('factorType')
+        //   });
+        // })
+        // .fail(function () {
+        //   //need empty fail handler on model to display errors on form
+        // });
+      }
+    },
+    Form: {
+      noCancelButton: true,
+      save: _.partial(Okta.loc, 'registration.form.submit', 'login'),
+      saveId: 'okta-registration-submit',
+      title: _.partial(Okta.loc, 'registration.form.title', 'login'),
+      formChildren: function () {
+        /*eslint complexity: [2, 9] max-statements: [2, 23] */
+        var formChildren = [];
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.firstname.placeholder', 'login'),
+          name: 'firstname',
+          input: TextBox,
+          type: 'text',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.firstname.tooltip', 'login'),
+            icon: 'person-16-gray'
+          }
+        }));
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.lastname.placeholder', 'login'),
+          name: 'lastname',
+          input: TextBox,
+          type: 'text',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.lastname.tooltip', 'login'),
+            icon: 'person-16-gray'
+          }
+        }));
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.username.placeholder', 'login'),
+          name: 'username',
+          input: TextBox,
+          type: 'text',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.username.tooltip', 'login'),
+            icon: 'person-16-gray'
+          }
+        }));
+
+        formChildren.push(FormType.Input({
+          placeholder: Okta.loc('primaryauth.password.placeholder', 'login'),
+          name: 'password',
+          input: TextBox,
+          type: 'password',
+          params: {
+            innerTooltip: Okta.loc('primaryauth.password.tooltip', 'login'),
+            icon: 'remote-lock-16'
+          }
+        }));
+
+        return formChildren;
+      },
+      initialize: function () {
+        this.listenTo(this.state, 'contactSupport', function () {
+          this.add(ContactSupport, '.o-form-error-container');
+        });
+
+        this.listenTo(this, 'save', function () {
+          this.options.appState.set('username', this.model.get('username'));
+          this.model.save();
+        });
+      },
+      setDefaultFactorType: function (factorType) {
+        if (_.isEmpty(this.model.get('factorType'))) {
+          this.model.set('factorType', factorType);
         }
-      });
-      return new Model();
-    },
-    showErrors: function (error, hideRegisterButton) {
-      //for parseSchema error hide form and show error at form level
-      if(error.callback == 'parseSchema' && error.errorCauses) {
-        error.errorSummary = _.clone(error.errorCauses[0].errorSummary);
-        delete error.errorCauses;
-      }
-      //show error on form
-      this.model.trigger('error', this.model, {
-        responseJSON: error
-      });
-
-      //throw global error
-      var errMsg = error.callback? error.callback+':'+ error.errorSummary: error.errorSummary;
-      this.settings.callGlobalError(new Errors.RegistrationError(errMsg));
-
-      if (hideRegisterButton) {
-        this.$el.find('.button-primary').hide();
-      }
-    },
-    fetchInitialData: function () {
-      var self = this;
-      // register parse complete event listener
-      self.state.get('schema').on('parseComplete', function(updatedSchema) {
-        var modelProperties = updatedSchema.properties.createModelProperties();
-        // create model
-        self.model = self.createRegistrationModel(modelProperties);
-        // create form
-        var form = new Form(self.toJSON());
-        // add form
-        self.add(form);
-        // add footer
-        self.footer = new self.Footer(self.toJSON());
-        self.add(self.footer);
-        self.addListeners();
-        if (updatedSchema.error) {
-          self.showErrors(updatedSchema.error, true);
-        } else {
-          // add fields
-          updatedSchema.properties.each(function(schemaProperty) {
-            var inputOptions = RegistrationFormFactory.createInputOptions(schemaProperty);
-            var subSchemas = schemaProperty.get('subSchemas');
-            var name = schemaProperty.get('name');
-            form.addInput(inputOptions);
-            if (name === 'password' && subSchemas) {
-              form.add(SubSchema.extend({id: 'subschemas-' + name, subSchemas: subSchemas}));
+      },
+      createRecoveryFactorButton: function (className, labelCode, factorType, form) {
+        return FormType.Button({
+          attributes: { 'data-se': className},
+          className: 'button button-primary button-wide ' + className,
+          title: Okta.loc(labelCode, 'login'),
+          click: function () {
+            form.clearErrors();
+            if (this.model.isValid()) {
+              this.model.set('factorType', factorType);
+              form.trigger('save', this.model);
             }
-          });
-          var requiredFieldsLabel =  Okta.tpl('<span class="required-fields-label">{{label}}</span>')({
-            label: Okta.loc('registration.required.fields.label', 'login')
-          });
-          form.add(requiredFieldsLabel);
-        }
-      });
-      // fetch schema from API
-      return this.state.get('schema').fetch();
+          }
+        });
+      }
     },
     Footer: Footer,
+
+    initialize: function () {
+      this.options.appState.unset('username');
+    }
   });
+
 });
