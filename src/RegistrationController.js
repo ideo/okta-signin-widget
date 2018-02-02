@@ -164,6 +164,17 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
           }
         }));
 
+        formChildren.push(FormType.View({
+          View: Okta.View.extend({
+            className: 'consent-title',
+            template: '\
+              <p> \
+                {{{i18n code="registration.agreeTerms" bundle="login" }}} \
+                <a href="https://www.ideo.com" class="link" target="_blank">{{{i18n code="consent.required.termsOfService" bundle="login" }}}</a>. \
+              </p>'
+          })
+        }));
+
         return formChildren;
       },
       initialize: function () {
