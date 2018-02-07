@@ -79,7 +79,7 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         var self = this;
         return this.startTransaction(function (authClient) {
           var deferred = Q.defer();
-          $.post('https://ideo-sso-profile.herokuapp.com/api/v1/users', {
+          $.post('/api/v1/users', {
             first_name: self.get('firstname'), // eslint-disable-line camelcase
             last_name: self.get('lastname'), // eslint-disable-line camelcase
             email: self.get('username'),
@@ -91,8 +91,16 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
                 password: self.get('password')
               })
             );
-          }).fail(function() {
-            // console.log('error', err); // eslint-disable-line
+          }).fail(function(err) {
+            if (err.responseJSON && err.responseJSON.data && err.responseJSON.data.error === 'DUPLICATE_EMAIL') {
+              self.trigger('invalid', self, {
+                'username': Okta.loc('registration.error.userName.notUniqueWithinOrg', 'login')
+              });
+            } else {
+              self.trigger('invalid', self, {
+                'username': Okta.loc('oform.error.unexpected', 'login')
+              });
+            }
           });
 
           return deferred.promise;
@@ -170,7 +178,9 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
             template: '\
               <p> \
                 {{{i18n code="registration.agreeTerms" bundle="login" }}} \
-                <a href="https://www.ideo.com" class="link" target="_blank">{{{i18n code="consent.required.termsOfService" bundle="login" }}}</a>. \
+                <a href="https://www.ideo.com" class="link" target="_blank"> \
+                  {{{i18n code="consent.required.termsOfService" bundle="login" }}} \
+                </a>. \
               </p>'
           })
         }));
