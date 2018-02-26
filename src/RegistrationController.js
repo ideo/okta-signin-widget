@@ -71,7 +71,7 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         invalid = invalid || ValidationUtil.validateRequired(this, 'lastname');
         invalid = invalid || ValidationUtil.validateRequired(this, 'username');
         invalid = invalid || ValidationUtil.validateRequired(this, 'password');
-        invalid = invalid || ValidationUtil.validatePasswordLength(this);
+        invalid = invalid || ValidationUtil.validatePasswordStrength(this);
 
         return invalid;
       },

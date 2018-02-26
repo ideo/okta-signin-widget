@@ -33,13 +33,37 @@ define(['okta'], function (Okta) {
     }
   };
 
-  // Validate that the 'password' field is at least 8 characters
-  fn.validatePasswordLength = function (model) {
+  // Validate that the 'password' field has the necessary characters
+  fn.validatePasswordStrength = function (model) {
     var password = model.get('password');
-    if (password && password.length < 8) {
-      return {
-        password: Okta.loc('model.validation.field.too.small', 'login', [8])
-      };
+    if (password) {
+      if (password.length < 8) {
+        // min length: 8 characters
+        return {
+          password: Okta.loc('model.validation.field.too.small', 'login', [8])
+        };
+      } else if (password.toUpperCase() == password) {
+        // required: lower case letter
+        return {
+          password: Okta.loc('password.complexity.requirements', 'login', [
+            Okta.loc('password.complexity.lowercase', 'login')
+          ])
+        };
+      } else if (password.toLowerCase() == password) {
+        // required: upper case letter
+        return {
+          password: Okta.loc('password.complexity.requirements', 'login', [
+            Okta.loc('password.complexity.uppercase', 'login')
+          ])
+        };
+      } else if (/[0-9]/.test(password) === false) {
+        // required: number
+        return {
+          password: Okta.loc('password.complexity.requirements', 'login', [
+            Okta.loc('password.complexity.number', 'login')
+          ])
+        };
+      }
     }
   };
 
