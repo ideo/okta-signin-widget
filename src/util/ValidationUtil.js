@@ -67,12 +67,21 @@ define(['okta'], function (Okta) {
     }
   };
 
+  fn.validateAgreeTerms = function (model) {
+    var msg = Okta.loc('registration.error.agreeterms.mustBeAgreedTo', 'login');
+    return fn.validateRequired(model, 'agreeterms', msg);
+  };
+
   // Validate that the given field is not blank
-  fn.validateRequired = function (model, field) {
+  // Allows passing in desired message if it doesn't pass validation
+  fn.validateRequired = function (model, field, message) {
     var data = model.get(field);
+    if (!message) {
+      message = Okta.loc('model.validation.field.blank', 'login');
+    }
     if (!data || data.length < 1) {
       var error = {};
-      error[field] = Okta.loc('model.validation.field.blank', 'login');
+      error[field] = message;
       return error;
     }
   };

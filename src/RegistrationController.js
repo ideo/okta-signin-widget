@@ -24,6 +24,7 @@ define([
 function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSupport, TextBox) {
 
   var _ = Okta._;
+  var compile = Okta.Handlebars.compile;
   var Footer = Okta.View.extend({
     template: '\
       <a href="#" class="link help js-back" data-se="back-link">\
@@ -63,7 +64,8 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         firstname: ['string', true],
         lastname: ['string', true],
         username: ['string', true],
-        password: ['string', true]
+        password: ['string', true],
+        agreeterms: ['boolean', true]
       },
       validate: function () {
         var invalid = ValidationUtil.validateUsername(this);
@@ -72,6 +74,7 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         invalid = invalid || ValidationUtil.validateRequired(this, 'username');
         invalid = invalid || ValidationUtil.validateRequired(this, 'password');
         invalid = invalid || ValidationUtil.validatePasswordStrength(this);
+        invalid = invalid || ValidationUtil.validateAgreeTerms(this);
 
         return invalid;
       },
@@ -172,17 +175,23 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
           }
         }));
 
-        formChildren.push(FormType.View({
-          View: Okta.View.extend({
-            className: 'consent-title',
-            template: '\
-              <p> \
-                {{{i18n code="registration.agreeTerms" bundle="login" }}} \
-                <a href="https://www.ideo.com" class="link" target="_blank"> \
-                  {{{i18n code="consent.required.termsOfService" bundle="login" }}} \
-                </a>. \
-              </p>'
-          })
+        var agreeTermsTemplate = compile(
+          '{{{i18n code="registration.agreeTerms" bundle="login" }}} \
+          <a href="https://creativedifference.ideo.com/#/privacy" class="link" target="_blank" \
+          >{{{i18n code="consent.required.privacyPolicy" bundle="login" }}}</a>.'
+        );
+
+        formChildren.push(FormType.Input({
+          className: 'consent-agree-terms',
+          name: 'agreeterms',
+          type: 'checkbox',
+          placeholder: 'I agree to the terms of the Privacy Policy.',
+          render: function () {
+            // Okta's FormType placeholder attribute escapes html input
+            // So we manually inject the template into the label to enable html link and translated values
+            // For reference, CheckBox source is here: packages/@okta/courage/src/views/forms/inputs/CheckBox.js
+            this.$el.find('label').html(agreeTermsTemplate());
+          }
         }));
 
         return formChildren;
