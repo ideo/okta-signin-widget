@@ -149,6 +149,6 @@
   margin-bottom: 10px;
   font-size: 16px;
   a, a:hover, a:active, a:visited {
-    color: $primary-color;
+    color: $primary-color !important;
   }
 }
