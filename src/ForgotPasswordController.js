@@ -154,6 +154,18 @@ function (Okta, FormController, Enums, FormType, ValidationUtil, ContactSupport,
       },
       initialize: function () {
 
+        // Create function for getting a url parameter
+        this.$.urlParam = function (name) {
+          var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+          if (results) { return results[1]; }
+          return 0;
+        };
+
+        // If username is present as a url parameter, populate the form with it
+        if(this.$.urlParam('username')) {
+          this.model.set('username', this.$.urlParam('username'));
+        }
+
         this.listenTo(this.state, 'contactSupport', function () {
           this.add(ContactSupport, '.o-form-error-container');
         });
