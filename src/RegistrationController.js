@@ -24,10 +24,10 @@ define([
 function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSupport, TextBox) {
 
   var _ = Okta._;
-  var compile = Okta.Handlebars.compile;
+
   var Footer = Okta.View.extend({
     template: '\
-      <a href="#" class="link help js-back" data-se="back-link">\
+      Or <a href="#" class="link help js-back" data-se="back-link">\
         {{i18n code="goback" bundle="login"}}\
       </a>\
       {{#if helpSupportNumber}}\
@@ -35,6 +35,12 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         {{i18n code="mfa.noAccessToEmail" bundle="login"}}\
       </a>\
       {{/if}}\
+      <div class="ideo-privacy-policy">\
+        Please take a look at our \
+        <a href="https://creativedifference.ideo.com/#/privacy" class="inline-link" target="_blank"\
+        >{{{i18n code="consent.required.privacyPolicy" bundle="login" }}}</a>\
+        to understand how we use your personal information.\
+      </div>\
     ',
     className: 'auth-footer',
     events: {
@@ -172,25 +178,6 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
           params: {
             innerTooltip: Okta.loc('primaryauth.password.tooltip', 'login'),
             icon: 'remote-lock-16'
-          }
-        }));
-
-        var agreeTermsTemplate = compile(
-          '{{{i18n code="registration.agreeTerms" bundle="login" }}} \
-          <a href="https://creativedifference.ideo.com/#/privacy" class="link" target="_blank" \
-          >{{{i18n code="consent.required.privacyPolicy" bundle="login" }}}</a>.'
-        );
-
-        formChildren.push(FormType.Input({
-          className: 'consent-agree-terms',
-          name: 'agreeterms',
-          type: 'checkbox',
-          placeholder: 'I agree to the terms of the Privacy Policy.',
-          render: function () {
-            // Okta's FormType placeholder attribute escapes html input
-            // So we manually inject the template into the label to enable html link and translated values
-            // For reference, CheckBox source is here: packages/@okta/courage/src/views/forms/inputs/CheckBox.js
-            this.$el.find('label').html(agreeTermsTemplate());
           }
         }));
 

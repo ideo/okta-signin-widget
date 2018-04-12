@@ -86,14 +86,14 @@
 
   .link {
   /* -- Fonts and Text Colors: links -- */
-    color: $medium-text-color;
+    color: $link-text-color;
 
     &:link,
     &:visited,
     &:hover,
     &:active {
     /* -- Fonts and Text Colors: links -- */
-      color: $medium-text-color;
+      color: $link-text-color;
     }
   }
 
@@ -381,7 +381,7 @@
       background-image: url('../img/icons/mfa/voicecall@2x.png');
     }
   }
-  
+
   .mfa-email-30,
   .enroll-factor-row .mfa-okta-email {
     /* -- Factor Icons (small): EMAIL -- */

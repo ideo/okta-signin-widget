@@ -53,6 +53,7 @@
   @import 'modules/enroll';
   @import 'modules/accessibility';
   @import 'modules/registration';
+  @import 'ideo';
 
   &.can-remove-beacon {
     @include max-height-mq(550px) {
