@@ -37,7 +37,7 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
       {{/if}}\
       <div class="ideo-privacy-policy">\
         Please take a look at our \
-        <a href="https://creativedifference.ideo.com/#/privacy" class="inline-link" target="_blank"\
+        <a href="https://www.ideo.com/privacy" class="inline-link" target="_blank"\
         >{{{i18n code="consent.required.privacyPolicy" bundle="login" }}}</a>\
         to understand how we use your personal information.\
       </div>\
