@@ -20,12 +20,6 @@ define([
           <span class="registration-label">{{label}}</span>\
           <a title="{{text}}" aria-label="{{text}}" data-se="register" class="registration-link" href="#">{{text}}</a>\
         </div>\
-        <div class="ideo-privacy-policy">\
-          Please take a look at our \
-          <a href="https://www.ideo.com/privacy" class="inline-link" target="_blank"\
-          >{{{i18n code="consent.required.privacyPolicy" bundle="login" }}}</a>\
-          to understand how we use your personal information.\
-        </div>\
         ',
     className: 'registration-container',
 
