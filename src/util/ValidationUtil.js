@@ -67,11 +67,6 @@ define(['okta'], function (Okta) {
     }
   };
 
-  fn.validateAgreeTerms = function (model) {
-    var msg = Okta.loc('registration.error.agreeterms.mustBeAgreedTo', 'login');
-    return fn.validateRequired(model, 'agreeterms', msg);
-  };
-
   // Validate that the given field is not blank
   // Allows passing in desired message if it doesn't pass validation
   fn.validateRequired = function (model, field, message) {

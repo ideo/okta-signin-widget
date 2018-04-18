@@ -64,8 +64,7 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         firstname: ['string', true],
         lastname: ['string', true],
         username: ['string', true],
-        password: ['string', true],
-        agreeterms: ['boolean', true]
+        password: ['string', true]
       },
       validate: function () {
         var invalid = ValidationUtil.validateUsername(this);
@@ -74,7 +73,6 @@ function (Okta, $, FormController, Enums, FormType, ValidationUtil, Q, ContactSu
         invalid = invalid || ValidationUtil.validateRequired(this, 'username');
         invalid = invalid || ValidationUtil.validateRequired(this, 'password');
         invalid = invalid || ValidationUtil.validatePasswordStrength(this);
-        invalid = invalid || ValidationUtil.validateAgreeTerms(this);
 
         return invalid;
       },
